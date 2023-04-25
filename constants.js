@@ -4,7 +4,7 @@ let config = {
       dbName: "onboarding",
     },
     collections: {
-      steps: "steps"
+      steps: "userStepSync"
     },
   };
   

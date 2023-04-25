@@ -9,7 +9,7 @@ router.get('/', async function(req, res, next) {
   const collectionName = config.constants.collections.steps
   const client = await getMongoClient();  
   const database = client.db(config.constants.nosqldb.dbName, collectionName);
-  const response = await database.collection(collectionName).find({}).limit(1).sort({$natural:-1}).toArray();
+  const response = await database.collection(collectionName).find({}).toArray();
 
   res.send(response);
 });
@@ -18,16 +18,31 @@ router.post('/', async function(req, res, next) {
   const collectionName = config.constants.collections.steps
   const client = await getMongoClient();  
   const database = client.db(config.constants.nosqldb.dbName, collectionName);
-  var maxid = await getMaxId(database, collectionName);
-  console.log(maxid);
   let dateToUpdate = new Date();
   let content = req.body;
-  content.id = maxid;
   content.date = dateToUpdate;
   content.stepsCount = content.stepsCount
   var result = await database
       .collection(collectionName)
-      .insertOne(content)
+      .updateMany(
+        {},
+        {"$set":  content},
+        {upsert: true}
+      )
+  res.send({result})
+})
+
+router.post('/reset/:id', async function(req, res, next) {
+  const collectionName = config.constants.collections.steps
+  const client = await getMongoClient();  
+  const database = client.db(config.constants.nosqldb.dbName, collectionName);
+  let dateToUpdate = new Date();
+  var result = await database
+      .collection(collectionName)
+      .updateOne({"id": _.parseInt(req.params.id)}, {"$set": {"date": dateToUpdate,
+        "stepsCount": 0
+      }},
+      {upsert: true})
   res.send({result})
 })
 
@@ -42,9 +57,6 @@ async function getMaxId(database, collectionName) {
               }
           }
       ]).toArray();
-
-  //console.log(result);
-  //console.log((result[0].maxRequestId));
   let maxid = 1;
   
   if (!_.isEmpty(result))
